@@ -102,6 +102,19 @@ h1 em{ color:var(--ember); font-style:normal; }
 }
 .share-btn:hover{ background:#3ee27f; transform:translateY(-1px); }
 .share-btn:active{ transform:translateY(0); }
+.copy-btn{
+  background:none;
+  border:1px solid var(--card-border);
+  color:var(--cream-dim);
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:13px;
+  padding:11px 16px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:border-color .15s ease, color .15s ease;
+}
+.copy-btn:hover{ border-color:var(--ember); color:var(--cream); }
 
 nav.tabs{
   display:flex;
@@ -317,6 +330,7 @@ footer{ text-align:center; padding:24px; color:var(--cream-dim); font-size:11.5p
       <input type="month" id="in_mesSimulacion" style="width:auto;">
     </div>
     <button class="share-btn" onclick="shareWhatsApp()">📤 Compartir por WhatsApp</button>
+    <button class="copy-btn" onclick="copyReport()">📋 Copiar reporte completo</button>
     <button class="export-btn" onclick="exportPDF()">⬇ Descargar reporte PDF</button>
   </div>
 </header>
@@ -1512,21 +1526,95 @@ function loadFromURL(){
   }
 }
 
-function shareWhatsApp(){
+function buildFullReportText(){
+  const L = LAST;
+  const mesLabel = formatMes($('in_mesSimulacion').value) || 'sin mes definido';
+  const clientesPeMes = $('out_clientesPeMes') ? $('out_clientesPeMes').textContent : '—';
+  const clientesMetaMes = $('out_clientesMetaMes') ? $('out_clientesMetaMes').textContent : '—';
+  const almuerzosDia = $('out_almuerzosNecesariosDia') ? $('out_almuerzosNecesariosDia').textContent : '—';
+
+  const recoHeads = Array.from(document.querySelectorAll('.reco-item.danger .head, .reco-item.warn .head'))
+    .map(el => '⚠️ ' + el.textContent).join('\n');
+  const recoText = recoHeads || '✓ Todos los indicadores clave están en rango saludable.';
+
   const state = gatherState();
   const json = JSON.stringify(state);
   const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
   const url = location.origin + location.pathname + '?data=' + encoded;
-  const mesLabel = formatMes($('in_mesSimulacion').value) || 'sin mes definido';
-  const L = LAST;
-  const resumen =
-    `📊 *Simulación Montana Vinos & Parrilla* — ${mesLabel}\n\n` +
-    `Venta Bruta: ${fmt(L.ventaBruta)}\n` +
-    `Punto de equilibrio: ${fmt(L.ventaBrutaBE)}\n` +
-    `${L.utilidadReal>=0 ? 'Utilidad' : 'Pérdida'} estimada: ${fmt(Math.abs(L.utilidadReal))}\n\n` +
-    `Abre la simulación completa con todos los datos cargados aquí:\n${url}`;
-  const waUrl = 'https://wa.me/?text=' + encodeURIComponent(resumen);
+
+  return (
+`*📊 SIMULACIÓN MONTANA VINOS & PARRILLA*
+_Mes: ${mesLabel}_
+
+*1. CASCADA DE INGRESOS*
+Venta Bruta: ${fmt(L.ventaBruta)}
+(-) Ipoconsumo: ${fmt(L.ipoconsumo)}
+(-) Propina: ${fmt(L.propina)}
+*(=) Venta Neta: ${fmt(L.ventaNeta)}*
+
+*2. COSTOS FIJOS* (Total: ${fmt(L.costosFijosTotal)})
+Arriendo: ${fmt(L.arriendo)} (${pct(L.arriendoPctNeta)} de venta neta)
+Servicios públicos: ${fmt(L.servicios)}
+Maquinaria: ${fmt(L.maquinaria)}
+Comisiones bancarias: ${fmt(L.comisiones)}
+Publicidad: ${fmt(L.publicidad)}
+Varios: ${fmt(L.varios)}
+
+*3. NÓMINA* (${pct(L.nominaPctNeta)} de venta neta — estándar 28%-35%)
+Flujo de caja planta: ${fmt(L.plantaFlujo)}
+Recargo dominical/festivo: ${fmt(L.plantaRecargo)}
+Provisión (prima/cesantías/vacaciones): ${fmt(L.plantaProvision)}
+Turnos extra: ${fmt(L.turnosTotal)}
+*Nómina total usada: ${fmt(L.nominaTotal)}*
+
+*4. MATERIA PRIMA* (objetivo ${pct(L.foodCostPct)})
+Cocina: ${pct(L.pctCocina)} (obj. ${pct(L.splitCocina)})
+Bar: ${pct(L.pctBar)} (obj. ${pct(L.splitBar)})
+Varios (aseo/desechables): ${pct(L.pctVarios)} (obj. ${pct(L.splitVarios)})
+*Total: ${pct(L.pctTotalInsumos)}*
+
+*5. PUNTO DE EQUILIBRIO Y META*
+Punto de equilibrio: ${fmt(L.peDiario)}/día · ${fmt(L.peSemanal)}/semana · ${fmt(L.ventaBrutaBE)}/mes
+Meta de ganancia (${pct(L.margenDeseado)}): ${fmt(L.ventaBrutaMeta)}/mes
+Clientes necesarios/mes: ${clientesPeMes} (equilibrio) · ${clientesMetaMes} (meta)
+Almuerzo ejecutivo: aporte ${fmt(L.aporteAlmuerzo)}/unidad · necesitas ${almuerzosDia}/día para la meta
+
+*6. BALANCE GENERAL DEL MES*
+Total ingresos (venta bruta): ${fmt(L.ventaBruta)}
+Total gastado/invertido: ${fmt(L.totalGastado)}
+*${L.utilidadReal>=0?'UTILIDAD':'PÉRDIDA'}: ${fmt(Math.abs(L.utilidadReal))}* (${pct(Math.abs(L.margenReal))} de la venta neta)
+
+*7. PUNTOS A REVISAR*
+${recoText}
+
+🔗 Simulación completa con todos los datos cargados:
+${url}`
+  );
+}
+
+function shareWhatsApp(){
+  const text = buildFullReportText();
+  const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
   window.open(waUrl, '_blank');
+}
+
+function copyReport(){
+  const text = buildFullReportText();
+  const done = () => alert('Reporte completo copiado. Pégalo en el chat de WhatsApp que quieras.');
+  const fail = () => alert('No se pudo copiar automáticamente en este navegador. Usa el botón de WhatsApp en su lugar.');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(fail);
+  } else {
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      done();
+    }catch(e){ fail(); }
+  }
 }
 
 // ---------- INIT ----------
