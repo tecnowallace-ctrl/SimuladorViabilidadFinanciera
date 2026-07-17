@@ -85,6 +85,23 @@ h1 em{ color:var(--ember); font-style:normal; }
 }
 .export-btn:hover{ background:var(--ember-light); transform:translateY(-1px); }
 .export-btn:active{ transform:translateY(0); }
+.share-btn{
+  background:#25D366;
+  color:#0b1f13;
+  border:none;
+  font-family:var(--font-body);
+  font-weight:700;
+  font-size:14px;
+  padding:12px 20px;
+  border-radius:8px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  transition:transform .15s ease, background .15s ease;
+}
+.share-btn:hover{ background:#3ee27f; transform:translateY(-1px); }
+.share-btn:active{ transform:translateY(0); }
 
 nav.tabs{
   display:flex;
@@ -152,7 +169,7 @@ label{
   font-weight:500;
 }
 label:first-of-type{ margin-top:0; }
-input[type=number], input[type=text], select{
+input[type=number], input[type=text], input[type=month], select{
   width:100%;
   background:var(--bg-elev);
   border:1px solid var(--card-border);
@@ -294,8 +311,19 @@ footer{ text-align:center; padding:24px; color:var(--cream-dim); font-size:11.5p
     <p class="brand-eyebrow">Montana Vinos &amp; Parrilla</p>
     <h1>Simulador de <em>Viabilidad</em> Financiera</h1>
   </div>
-  <button class="export-btn" onclick="exportPDF()">⬇ Descargar reporte PDF</button>
+  <div style="display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap;">
+    <div>
+      <label style="margin:0 0 5px;">Mes de la simulación</label>
+      <input type="month" id="in_mesSimulacion" style="width:auto;">
+    </div>
+    <button class="share-btn" onclick="shareWhatsApp()">📤 Compartir por WhatsApp</button>
+    <button class="export-btn" onclick="exportPDF()">⬇ Descargar reporte PDF</button>
+  </div>
 </header>
+
+<div id="sharedBanner" class="alert ok" style="display:none; margin:14px 32px 0; align-items:center;">
+  📥 Cargaste una simulación compartida por enlace — todos los campos se llenaron automáticamente. Puedes seguir editando libremente, esto no afecta a quien te la compartió.
+</div>
 
 <nav class="tabs" id="tabs">
   <button data-tab="ingresos" class="active">1 · Cascada de Ingresos</button>
@@ -1384,7 +1412,7 @@ function exportPDF(){
   doc.setFont('helvetica','bold'); doc.setFontSize(16);
   doc.text('Montana Vinos & Parrilla — Reporte de Viabilidad Financiera', 14, 18);
   doc.setFont('helvetica','normal'); doc.setFontSize(10);
-  doc.text('Generado: ' + new Date().toLocaleDateString('es-CO'), 14, 25);
+  doc.text('Generado: ' + new Date().toLocaleDateString('es-CO') + '   ·   Mes simulado: ' + (formatMes($('in_mesSimulacion').value) || '—'), 14, 25);
 
   doc.autoTable({ startY:32, head:[['Balance Financiero General (mensual)','Valor']],
     body:[
@@ -1426,11 +1454,96 @@ function exportPDF(){
   doc.save('reporte_viabilidad_montana.pdf');
 }
 
+// ---------- MES ----------
+function formatMes(v){
+  if(!v) return '';
+  const [y,m] = v.split('-');
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const idx = parseInt(m)-1;
+  return (meses[idx]||'') + ' ' + y;
+}
+
+// ---------- COMPARTIR / CARGAR ESTADO ----------
+function gatherState(){
+  const simple = {};
+  document.querySelectorAll('input[id^="in_"], select[id^="in_"]').forEach(el=>{
+    if(el.closest('#tablaPlanta') || el.closest('#tablaTurnos') || el.closest('#tablaInsumos') || el.closest('#tablaDias')) return;
+    simple[el.id] = (el.type === 'checkbox') ? el.checked : el.value;
+  });
+  return { simple, plantaRows, turnosRows, insumosSemanas, diasSemanaData, nominaBase };
+}
+
+function applyState(state){
+  if(state.simple){
+    Object.entries(state.simple).forEach(([id,val])=>{
+      const el = $(id);
+      if(!el) return;
+      if(el.type === 'checkbox') el.checked = !!val;
+      else el.value = val;
+    });
+  }
+  if(state.plantaRows) plantaRows = state.plantaRows;
+  if(state.turnosRows) turnosRows = state.turnosRows;
+  if(state.insumosSemanas) insumosSemanas = state.insumosSemanas;
+  if(state.diasSemanaData) diasSemanaData = state.diasSemanaData;
+  if(state.nominaBase){
+    nominaBase = state.nominaBase;
+    $('btn_nominaNeta').classList.toggle('active', nominaBase==='neta');
+    $('btn_nominaProv').classList.toggle('active', nominaBase==='prov');
+  }
+  renderPlantaTable();
+  renderTurnosTable();
+  calcAll();
+}
+
+function loadFromURL(){
+  const params = new URLSearchParams(location.search);
+  const data = params.get('data');
+  if(!data) return false;
+  try{
+    const json = decodeURIComponent(escape(atob(data)));
+    const state = JSON.parse(json);
+    applyState(state);
+    $('sharedBanner').style.display = 'flex';
+    return true;
+  }catch(e){
+    console.error('No se pudo cargar la simulación compartida:', e);
+    return false;
+  }
+}
+
+function shareWhatsApp(){
+  const state = gatherState();
+  const json = JSON.stringify(state);
+  const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
+  const url = location.origin + location.pathname + '?data=' + encoded;
+  const mesLabel = formatMes($('in_mesSimulacion').value) || 'sin mes definido';
+  const L = LAST;
+  const resumen =
+    `📊 *Simulación Montana Vinos & Parrilla* — ${mesLabel}\n\n` +
+    `Venta Bruta: ${fmt(L.ventaBruta)}\n` +
+    `Punto de equilibrio: ${fmt(L.ventaBrutaBE)}\n` +
+    `${L.utilidadReal>=0 ? 'Utilidad' : 'Pérdida'} estimada: ${fmt(Math.abs(L.utilidadReal))}\n\n` +
+    `Abre la simulación completa con todos los datos cargados aquí:\n${url}`;
+  const waUrl = 'https://wa.me/?text=' + encodeURIComponent(resumen);
+  window.open(waUrl, '_blank');
+}
+
 // ---------- INIT ----------
+function initMes(){
+  if(!$('in_mesSimulacion').value){
+    const d = new Date();
+    $('in_mesSimulacion').value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }
+}
+
+initMes();
 renderPlantaTable();
 renderTurnosTable();
 bindRecalc();
-calcAll();
+if(!loadFromURL()){
+  calcAll();
+}
 </script>
 </body>
 </html>
