@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Viabilidad Financiera · Montana Vinos &amp; Parrilla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --bg: #17110F;
+  --bg-elev: #211815;
+  --card: #241A17;
+  --card-border: #3A2620;
+  --wine: #6E2036;
+  --wine-light: #8C2F45;
+  --ember: #D8893F;
+  --ember-light: #E9AC6D;
+  --cream: #F3E9DE;
+  --cream-dim: #C9BAAC;
+  --olive: #587A54;
+  --danger: #C24545;
+  --warn: #D8893F;
+  --ok: #6F9866;
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --radius: 10px;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse at top left, rgba(110,32,54,0.18), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(216,137,63,0.10), transparent 50%),
+    var(--bg);
+  color:var(--cream);
+  font-family:var(--font-body);
+  min-height:100vh;
+}
+header{
+  padding:28px 32px 20px;
+  border-bottom:1px solid var(--card-border);
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:16px;
+}
+.brand-eyebrow{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--ember-light);
+  margin:0 0 6px;
+}
+h1{
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:30px;
+  margin:0;
+  color:var(--cream);
+  letter-spacing:.01em;
+}
+h1 em{ color:var(--ember); font-style:normal; }
+.export-btn{
+  background:var(--ember);
+  color:#231208;
+  border:none;
+  font-family:var(--font-body);
+  font-weight:700;
+  font-size:14px;
+  padding:12px 20px;
+  border-radius:8px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  transition:transform .15s ease, background .15s ease;
+}
+.export-btn:hover{ background:var(--ember-light); transform:translateY(-1px); }
+.export-btn:active{ transform:translateY(0); }
+
+nav.tabs{
+  display:flex;
+  gap:4px;
+  padding:14px 32px 0;
+  overflow-x:auto;
+  border-bottom:1px solid var(--card-border);
+}
+nav.tabs button{
+  background:none;
+  border:none;
+  color:var(--cream-dim);
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:13.5px;
+  padding:12px 16px;
+  cursor:pointer;
+  white-space:nowrap;
+  border-bottom:2px solid transparent;
+  transition:color .15s ease, border-color .15s ease;
+}
+nav.tabs button.active{ color:var(--ember-light); border-bottom-color:var(--ember); }
+nav.tabs button:hover{ color:var(--cream); }
+
+main{ padding:28px 32px 60px; max-width:1360px; margin:0 auto; }
+.panel{ display:none; animation:fadein .2s ease; }
+.panel.active{ display:block; }
+@keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+.grid{ display:grid; gap:18px; }
+.grid-2{ grid-template-columns:1fr 1fr; }
+.grid-3{ grid-template-columns:repeat(3,1fr); }
+.grid-4{ grid-template-columns:repeat(4,1fr); }
+@media(max-width:900px){ .grid-2,.grid-3,.grid-4{ grid-template-columns:1fr; } }
+
+.card{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius);
+  padding:20px 22px;
+  position:relative;
+}
+.card.receipt{
+  background-image: radial-gradient(circle at 8px 0, transparent 7px, var(--bg) 7px);
+  background-position: -8px top;
+  background-size: 16px 16px;
+  background-repeat: repeat-x;
+  padding-top:26px;
+}
+.card h3{
+  font-family:var(--font-display);
+  font-size:16px;
+  font-weight:600;
+  margin:0 0 14px;
+  color:var(--ember-light);
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+label{
+  display:block;
+  font-size:12px;
+  color:var(--cream-dim);
+  margin:12px 0 5px;
+  font-weight:500;
+}
+label:first-of-type{ margin-top:0; }
+input[type=number], input[type=text], select{
+  width:100%;
+  background:var(--bg-elev);
+  border:1px solid var(--card-border);
+  color:var(--cream);
+  font-family:var(--font-mono);
+  font-size:14px;
+  padding:9px 11px;
+  border-radius:6px;
+  outline:none;
+  transition:border-color .15s ease;
+}
+input:focus, select:focus{ border-color:var(--ember); }
+.field-row{ display:flex; gap:10px; }
+.field-row > div{ flex:1; }
+.hint{ font-size:11px; color:var(--cream-dim); margin-top:4px; line-height:1.4; }
+
+.row-table{ width:100%; border-collapse:collapse; margin-top:6px; }
+.row-table th{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  color:var(--cream-dim);
+  text-align:left;
+  padding:6px 6px;
+  border-bottom:1px solid var(--card-border);
+}
+.row-table td{ padding:5px 6px; vertical-align:middle; font-size:13px; }
+.row-table input, .row-table select{ padding:6px 8px; font-size:13px; }
+.row-table .del-btn{
+  background:none; border:none; color:var(--danger); cursor:pointer; font-size:16px; padding:2px 8px;
+}
+.add-row-btn{
+  margin-top:10px;
+  background:none;
+  border:1px dashed var(--card-border);
+  color:var(--ember-light);
+  font-size:12.5px;
+  font-weight:600;
+  padding:8px 14px;
+  border-radius:6px;
+  cursor:pointer;
+}
+.add-row-btn:hover{ border-color:var(--ember); }
+
+.stat{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.stat .label{ font-size:11.5px; color:var(--cream-dim); font-weight:500; }
+.stat .value{ font-family:var(--font-mono); font-size:22px; font-weight:600; color:var(--cream); }
+.stat .value.big{ font-size:28px; }
+.stat .value.ember{ color:var(--ember-light); }
+.stat .value.small{ font-size:16px; }
+.stat .sub{ font-size:11px; color:var(--cream-dim); }
+
+.alert{
+  border-radius:8px;
+  padding:11px 14px;
+  font-size:12.5px;
+  margin-top:10px;
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  line-height:1.5;
+}
+.alert.ok{ background:rgba(111,152,102,0.12); border:1px solid rgba(111,152,102,0.4); color:var(--ok); }
+.alert.warn{ background:rgba(216,137,63,0.12); border:1px solid rgba(216,137,63,0.45); color:var(--ember-light); }
+.alert.danger{ background:rgba(194,69,69,0.14); border:1px solid rgba(194,69,69,0.5); color:#E38484; }
+
+.chart-wrap{ position:relative; height:280px; }
+.chart-wrap.tall{ height:340px; }
+.chart-wrap.short{ height:220px; }
+
+.tag{
+  display:inline-block;
+  font-family:var(--font-mono);
+  font-size:10px;
+  padding:2px 8px;
+  border-radius:100px;
+  background:rgba(216,137,63,0.15);
+  color:var(--ember-light);
+  letter-spacing:.03em;
+}
+
+.divider{ height:1px; background:var(--card-border); margin:18px 0; }
+
+.reco-item{
+  border-left:3px solid var(--card-border);
+  padding:10px 14px;
+  margin-bottom:10px;
+  border-radius:0 6px 6px 0;
+  background:var(--bg-elev);
+}
+.reco-item.danger{ border-left-color:var(--danger); }
+.reco-item.warn{ border-left-color:var(--ember); }
+.reco-item.ok{ border-left-color:var(--ok); }
+.reco-item .head{ font-weight:700; font-size:13px; margin-bottom:3px; }
+.reco-item.danger .head{ color:#E38484; }
+.reco-item.warn .head{ color:var(--ember-light); }
+.reco-item.ok .head{ color:var(--ok); }
+.reco-item p{ margin:0; font-size:12.5px; color:var(--cream-dim); line-height:1.5; }
+.reco-item .fix{ margin-top:6px; font-size:12.5px; color:var(--cream); font-weight:600; }
+
+.toggle-group{ display:flex; gap:8px; margin-top:4px; }
+.toggle-group button{
+  flex:1;
+  background:var(--bg-elev);
+  border:1px solid var(--card-border);
+  color:var(--cream-dim);
+  font-size:12px;
+  font-weight:600;
+  padding:9px 8px;
+  border-radius:6px;
+  cursor:pointer;
+}
+.toggle-group button.active{ background:var(--wine); border-color:var(--wine-light); color:var(--cream); }
+
+.switch-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; background:var(--bg-elev); border:1px solid var(--card-border); border-radius:8px; padding:10px 14px; }
+.switch-row .txt{ font-size:12.5px; color:var(--cream-dim); }
+.switch{ position:relative; width:42px; height:24px; flex-shrink:0; }
+.switch input{ opacity:0; width:0; height:0; }
+.slider{ position:absolute; cursor:pointer; inset:0; background:var(--card-border); border-radius:24px; transition:.2s; }
+.slider:before{ position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background:var(--cream); border-radius:50%; transition:.2s; }
+.switch input:checked + .slider{ background:var(--ember); }
+.switch input:checked + .slider:before{ transform:translateX(18px); }
+
+footer{ text-align:center; padding:24px; color:var(--cream-dim); font-size:11.5px; font-family:var(--font-mono); }
+
+::-webkit-scrollbar{ height:6px; width:6px; }
+::-webkit-scrollbar-thumb{ background:var(--card-border); border-radius:4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <p class="brand-eyebrow">Montana Vinos &amp; Parrilla</p>
+    <h1>Simulador de <em>Viabilidad</em> Financiera</h1>
+  </div>
+  <button class="export-btn" onclick="exportPDF()">⬇ Descargar reporte PDF</button>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="ingresos" class="active">1 · Cascada de Ingresos</button>
+  <button data-tab="costos">2 · Costos Fijos</button>
+  <button data-tab="nomina">3 · Nómina</button>
+  <button data-tab="insumos">4 · Materia Prima</button>
+  <button data-tab="resultados">5 · Resultados</button>
+  <button data-tab="dias">6 · Días &amp; Festivos</button>
+  <button data-tab="graficas">Gráficas</button>
+  <button data-tab="recomendaciones">Recomendaciones</button>
+  <button data-tab="balance">📋 Balance General</button>
+</nav>
+
+<main>
+
+  <!-- ================= PANEL 1: INGRESOS ================= -->
+  <section class="panel active" id="panel-ingresos">
+    <div class="grid grid-2">
+      <div class="card receipt">
+        <h3>💰 Venta Bruta y Parámetros</h3>
+        <label>Venta bruta mensual proyectada (COP)</label>
+        <input type="number" id="in_ventaBruta" value="105000000" step="100000">
+        <div class="field-row">
+          <div>
+            <label>Ipoconsumo — sugerido 8%, ajustable</label>
+            <input type="number" id="in_ipoconsumo" value="8" step="0.1">
+          </div>
+          <div>
+            <label>Propina sugerida (%) — variable, ajustable</label>
+            <input type="number" id="in_propina" value="10" step="0.1">
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label>Días de operación / mes</label>
+            <input type="number" id="in_diasMes" value="26" step="1">
+          </div>
+          <div>
+            <label>Días de operación / semana</label>
+            <input type="number" id="in_diasSemana" value="6" step="1">
+          </div>
+        </div>
+        <p class="hint">La propina no siempre se recibe (varía según el cliente y el turno) — por eso es 100% editable, incluso a 0% si quieres simular un escenario sin propina. El Ipoconsumo también es editable por si cambia tu régimen tributario.</p>
+      </div>
+
+      <div class="card">
+        <h3>🧾 Cascada resultante</h3>
+        <div id="cascadaBoxes"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PANEL 2: COSTOS FIJOS ================= -->
+  <section class="panel" id="panel-costos">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>🏠 Costos Fijos Mensuales</h3>
+        <label>Arriendo</label>
+        <input type="number" id="in_arriendo" value="8000000">
+        <label>Servicios públicos (promedio mensual)</label>
+        <input type="number" id="in_servicios" value="3500000">
+        <label>Alquiler de maquinaria</label>
+        <input type="number" id="in_maquinaria" value="1200000">
+        <label>Comisiones bancarias / datáfonos (% sobre venta bruta)</label>
+        <input type="number" id="in_comisiones" value="2.5" step="0.1">
+        <label>Publicidad y marketing</label>
+        <input type="number" id="in_publicidad" value="1500000">
+        <label>Varios (imprevistos operativos)</label>
+        <input type="number" id="in_varios" value="2000000">
+      </div>
+      <div class="card">
+        <h3>📊 Resumen de Costos Fijos</h3>
+        <div id="costosFijosResumen"></div>
+        <div id="alertaArriendo"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PANEL 3: NOMINA ================= -->
+  <section class="panel" id="panel-nomina">
+    <div class="card">
+      <h3>👥 A. Empleados de Planta</h3>
+      <div class="grid grid-4" style="margin-bottom:8px;">
+        <div>
+          <label>Salud patronal (%)</label>
+          <input type="number" id="in_saludPct" value="8.5" step="0.1">
+        </div>
+        <div>
+          <label>Pensión patronal (%)</label>
+          <input type="number" id="in_pensionPct" value="12" step="0.1">
+        </div>
+        <div>
+          <label>Nivel de riesgo ARL</label>
+          <select id="in_arlNivel">
+            <option value="0.522">I · 0.522%</option>
+            <option value="1.044">II · 1.044%</option>
+            <option value="2.436" selected>III · 2.436% (cocina/parrilla)</option>
+            <option value="4.35">IV · 4.35%</option>
+            <option value="6.96">V · 6.96%</option>
+          </select>
+        </div>
+        <div>
+          <label>Provisiones (Prima+Ces.+Int.+Vac. %)</label>
+          <input type="number" id="in_provisionPct" value="21.83" step="0.01">
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label>% Recargo dominical/festivo (Ley 2101/2466 — 90% desde jul-2026, 100% en 2027)</label>
+          <input type="number" id="in_recargoPct" value="90" step="1">
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <p class="hint">Se aplica sobre el valor del día ordinario (salario/30) × número de domingos/festivos trabajados, por cada empleado. Se suma al flujo de caja inmediato, no a las provisiones.</p>
+        </div>
+      </div>
+
+      <table class="row-table" id="tablaPlanta">
+        <thead>
+          <tr><th style="width:26%">Nombre / Cargo</th><th>Salario básico + transporte</th><th>Bonos no prestacionales</th><th>Dom/Fest trabajados (periodo)</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addPlantaRow()">+ Agregar empleado de planta</button>
+
+      <div class="divider"></div>
+      <div class="grid grid-4">
+        <div class="stat"><span class="label">Salarios + bonos + seg. social + ARL</span><span class="value ember small" id="out_plantaBase">$0</span></div>
+        <div class="stat"><span class="label">Recargo dominical/festivo</span><span class="value small" id="out_plantaRecargo">$0</span></div>
+        <div class="stat"><span class="label">Flujo de caja inmediato (planta)</span><span class="value ember" id="out_plantaFlujo">$0</span></div>
+        <div class="stat"><span class="label">Fondo de provisión (planta)</span><span class="value" id="out_plantaProvision">$0</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>🕒 B. Turnos Extras (Refuerzo de fin de semana)</h3>
+      <div class="alert warn" style="margin-top:0; margin-bottom:12px;">A los turneros solo se les paga el valor del turno pactado. No se les calcula salud, pensión, ARL ni provisiones — pero ese valor sí suma al total de nómina mensual (flujo de caja), porque es plata que sale de caja ese mes.</div>
+      <table class="row-table" id="tablaTurnos">
+        <thead>
+          <tr><th style="width:30%">Nombre / Cargo</th><th>Valor por turno</th><th>Turnos trabajados (periodo)</th><th>Subtotal</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addTurnoRow()">+ Agregar turnero</button>
+      <div class="divider"></div>
+      <div class="stat"><span class="label">Total turnos (periodo) — sin parafiscales ni provisiones</span><span class="value ember" id="out_turnosTotal">$0</span></div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>⚖️ Base para Punto de Equilibrio</h3>
+      <div class="toggle-group">
+        <button id="btn_nominaNeta" class="active" onclick="setNominaBase('neta')">Pago Neto del Mes</button>
+        <button id="btn_nominaProv" onclick="setNominaBase('prov')">Nómina con Provisiones</button>
+      </div>
+      <div class="divider"></div>
+      <div class="grid grid-2">
+        <div class="stat"><span class="label">Nómina total usada en cálculos</span><span class="value big ember" id="out_nominaBase">$0</span></div>
+        <div class="stat"><span class="label">% de nómina sobre Venta Neta</span><span class="value big" id="out_nominaPct">0%</span></div>
+      </div>
+      <div id="alertaNomina"></div>
+      <div class="divider"></div>
+      <p class="hint" style="margin-bottom:8px;">Tu nómina vs. el estándar del sector (28%-35% de la venta neta):</p>
+      <div class="chart-wrap short"><canvas id="chartNominaMini"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ================= PANEL 4: MATERIA PRIMA ================= -->
+  <section class="panel" id="panel-insumos">
+    <div class="card">
+      <h3>🥩 Food Cost — Presupuesto y Reparto Sugerido</h3>
+      <div class="grid grid-4">
+        <div>
+          <label>% Food cost objetivo (total)</label>
+          <input type="number" id="in_foodCostPct" value="30" step="0.5">
+        </div>
+        <div>
+          <label>Reparto sugerido · Cocina (%)</label>
+          <input type="number" id="in_splitCocina" value="20" step="0.5">
+        </div>
+        <div>
+          <label>Reparto sugerido · Bar (%)</label>
+          <input type="number" id="in_splitBar" value="6" step="0.5">
+        </div>
+        <div>
+          <label>Reparto sugerido · Varios (aseo/desechables) (%)</label>
+          <input type="number" id="in_splitVarios" value="4" step="0.5">
+        </div>
+      </div>
+      <p class="hint" id="splitCheckMsg"></p>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>📅 Seguimiento Semanal de Compras (Semana 1-4)</h3>
+      <p class="hint" style="margin-bottom:10px;">Digita la venta neta real de cada semana (o deja la proyectada) y las compras reales por categoría. Así identificas exactamente en qué rubro se está yendo el food cost.</p>
+      <table class="row-table" id="tablaInsumos">
+        <thead>
+          <tr>
+            <th>Semana</th><th>Venta neta real</th><th>Compras Cocina</th><th>Compras Bar</th><th>Compras Varios</th><th>Total</th><th>% s/ Venta Neta</th><th>Estado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="divider"></div>
+      <div class="chart-wrap tall"><canvas id="chartInsumosSemana"></canvas></div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>🔎 Diagnóstico por Categoría (acumulado del mes)</h3>
+      <div id="insumosDiagnostico"></div>
+    </div>
+  </section>
+
+  <!-- ================= PANEL 5: RESULTADOS ================= -->
+  <section class="panel" id="panel-resultados">
+
+    <div class="card">
+      <h3>⚖️ Punto de Equilibrio (Venta Bruta necesaria)</h3>
+      <p class="hint" style="margin-bottom:12px;">Sí incluye los descuentos de la cascada: primero se calcula la Venta Neta que cubre los costos fijos + food cost, y luego se "revierte" a Venta Bruta dividiendo por (1-Ipoconsumo)×(1-Propina). Por eso el punto de equilibrio en Venta Bruta es más alto que la Venta Neta que realmente necesitas cubrir.</p>
+      <div class="grid grid-3">
+        <div class="stat"><span class="label">Diario</span><span class="value big" id="out_peDiario">$0</span></div>
+        <div class="stat"><span class="label">Semanal</span><span class="value big" id="out_peSemanal">$0</span></div>
+        <div class="stat"><span class="label">Mensual</span><span class="value big ember" id="out_peMensual">$0</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>🎯 Meta de Ganancia</h3>
+      <label>% Margen de utilidad deseada (sobre venta neta)</label>
+      <input type="number" id="in_margenDeseado" value="15" step="0.5">
+      <div class="divider"></div>
+      <div class="grid grid-3">
+        <div class="stat"><span class="label">Venta requerida / día</span><span class="value big" id="out_metaDiaria">$0</span></div>
+        <div class="stat"><span class="label">Venta requerida / semana</span><span class="value big" id="out_metaSemanal">$0</span></div>
+        <div class="stat"><span class="label">Venta requerida / mes</span><span class="value big ember" id="out_metaMensual">$0</span></div>
+      </div>
+      <div id="alertaMargen"></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:18px;">
+      <div class="card">
+        <h3>🧍 Tráfico de Clientes</h3>
+        <label>Ticket promedio por cliente (COP, venta bruta)</label>
+        <input type="number" id="in_ticketProm" value="45000" step="1000">
+        <div class="divider"></div>
+        <table class="row-table">
+          <thead><tr><th></th><th>Punto de equilibrio</th><th>Meta de ganancia</th></tr></thead>
+          <tbody>
+            <tr><td>Clientes / día</td><td id="out_clientesPeDia">0</td><td id="out_clientesMetaDia">0</td></tr>
+            <tr><td>Clientes / semana</td><td id="out_clientesPeSemana">0</td><td id="out_clientesMetaSemana">0</td></tr>
+            <tr><td>Clientes / mes</td><td id="out_clientesPeMes">0</td><td id="out_clientesMetaMes">0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>🍽️ Almuerzo Ejecutivo (Lun-Vie)</h3>
+        <div class="field-row">
+          <div>
+            <label>Precio del menú</label>
+            <input type="number" id="in_precioAlmuerzo" value="24900" step="500">
+          </div>
+          <div>
+            <label>Cantidad vendida / día (prom.)</label>
+            <input type="number" id="in_cantAlmuerzo" value="50" step="1">
+          </div>
+        </div>
+        <div class="switch-row">
+          <span class="txt">Este almuerzo SÍ aplica Ipoconsumo/Propina (normalmente NO)</span>
+          <label class="switch"><input type="checkbox" id="in_almuerzoAplicaCascada"><span class="slider"></span></label>
+        </div>
+        <div class="divider"></div>
+        <div class="grid grid-2">
+          <div class="stat"><span class="label">Aporte neto por almuerzo</span><span class="value" id="out_aporteAlmuerzo">$0</span></div>
+          <div class="stat"><span class="label">Aporte actual / mes (L-V)</span><span class="value ember" id="out_aporteAlmuerzoMes">$0</span></div>
+        </div>
+        <p class="hint" id="aporteFormulaHint">Aporte neto = precio × (1 − Food cost). Por defecto NO se descuenta Ipoconsumo ni Propina, porque el almuerzo ejecutivo normalmente no genera propina.</p>
+        <div class="divider"></div>
+        <p class="hint" style="margin-bottom:6px; color:var(--cream); font-weight:600;">Proyección: almuerzos necesarios para aportar a la meta de margen</p>
+        <div class="grid grid-2">
+          <div class="stat"><span class="label">Almuerzos/mes necesarios</span><span class="value ember" id="out_almuerzosNecesariosMes">0</span></div>
+          <div class="stat"><span class="label">Almuerzos/día necesarios (≈22 días hábiles)</span><span class="value" id="out_almuerzosNecesariosDia">0</span></div>
+        </div>
+        <div id="alertaAlmuerzos"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PANEL 6: DIAS & FESTIVOS ================= -->
+  <section class="panel" id="panel-dias">
+    <div class="card">
+      <h3>📆 Venta Real Promedio por Día de la Semana</h3>
+      <table class="row-table" id="tablaDias">
+        <thead><tr><th>Día</th><th>Venta bruta promedio</th><th>% del total semanal</th><th>Objetivo (mismo patrón, escalado a punto de equilibrio)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="divider"></div>
+      <div class="grid grid-3">
+        <div class="stat"><span class="label">Total semanal real (histórico)</span><span class="value big" id="out_totalSemanaReal">$0</span></div>
+        <div class="stat"><span class="label">Punto de equilibrio semanal</span><span class="value big" id="out_peSemanalRef">$0</span></div>
+        <div class="stat"><span class="label">Brecha vs. punto de equilibrio</span><span class="value big" id="out_brechaSemana">$0</span></div>
+      </div>
+      <div class="divider"></div>
+      <div class="chart-wrap tall"><canvas id="chartDias"></canvas></div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>🎌 ¿Conviene Abrir en un Día Festivo?</h3>
+      <div class="grid grid-3">
+        <div>
+          <label>Día festivo a evaluar</label>
+          <select id="in_diaFestivo">
+            <option value="0">Lunes</option>
+            <option value="1">Martes</option>
+            <option value="2">Miércoles</option>
+            <option value="3">Jueves</option>
+            <option value="4">Viernes</option>
+            <option value="5">Sábado</option>
+            <option value="6">Domingo</option>
+          </select>
+        </div>
+        <div>
+          <label>Empleados de planta que trabajan ese día</label>
+          <input type="number" id="in_empleadosFestivo" value="6" step="1">
+        </div>
+        <div>
+          <label>% Recargo festivo aplicado</label>
+          <input type="number" id="in_recargoFestivoOverride" value="90" step="1">
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div id="festivoResultado"></div>
+      <p class="hint" style="margin-top:10px;">Simplificación financiera: compara la contribución neta de abrir (venta neta del día × (1−food cost)) contra el sobrecosto de recargo festivo de tu personal. No es asesoría legal — si decides cerrar, verifica con tu contador si igual debes remunerar el día como descanso, ya que eso depende de si hay compensatorio.</p>
+    </div>
+  </section>
+
+  <!-- ================= PANEL: GRAFICAS ================= -->
+  <section class="panel" id="panel-graficas">
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>💧 Cascada de Ingresos</h3>
+        <div class="chart-wrap"><canvas id="chartCascada"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>🥧 Estructura de Costos (mensual)</h3>
+        <div class="chart-wrap"><canvas id="chartCostos"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>⚖️ Venta Proyectada vs. Punto de Equilibrio vs. Meta</h3>
+        <div class="chart-wrap"><canvas id="chartBreakeven"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>📅 Objetivo de Venta por Día de la Semana</h3>
+        <div class="chart-wrap"><canvas id="chartSemana"></canvas></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px;">
+      <h3>📏 Benchmarks: Tu Situación vs. Estándar del Sector</h3>
+      <div class="chart-wrap tall"><canvas id="chartBenchmarks"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ================= PANEL: RECOMENDACIONES ================= -->
+  <section class="panel" id="panel-recomendaciones">
+    <div class="card">
+      <h3>🧭 Recomendaciones Financieras Automáticas</h3>
+      <p class="hint" style="margin-bottom:14px;">Cada recomendación muestra tu número actual y el ajuste concreto (en pesos o en %) para llegar a un rango saludable.</p>
+      <div id="recoList"></div>
+    </div>
+  </section>
+
+  <!-- ================= PANEL: BALANCE GENERAL ================= -->
+  <section class="panel" id="panel-balance">
+    <div class="card receipt">
+      <h3>📋 Balance Financiero General del Mes</h3>
+      <p class="hint" style="margin-bottom:14px;">Consolidado de todos los módulos: cuánto entró, cuánto se gastó y en qué, y si el resultado es utilidad o pérdida. La materia prima usa tu dato real digitado en "4 · Materia Prima"; si alguna semana no la diligenciaste, se estima con el 30% objetivo para no inflar la utilidad artificialmente.</p>
+
+      <div class="grid grid-3">
+        <div class="stat"><span class="label">Total Ingresos (Venta Bruta)</span><span class="value big" id="bal_totalIngresos">$0</span></div>
+        <div class="stat"><span class="label">Total Gastado / Invertido</span><span class="value big" id="bal_totalGastado">$0</span></div>
+        <div class="stat"><span class="label">Utilidad o Pérdida del mes</span><span class="value big" id="bal_utilidad">$0</span></div>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:18px;">
+      <div class="card">
+        <h3>💵 De dónde viene el ingreso</h3>
+        <table class="row-table">
+          <tbody id="bal_ingresosTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>🧾 En qué se gastó / invirtió</h3>
+        <table class="row-table">
+          <thead><tr><th>Categoría</th><th>Valor</th><th>% del total gastado</th></tr></thead>
+          <tbody id="bal_gastosTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>⚖️ Resultado Final</h3>
+      <div id="bal_resultadoBox"></div>
+      <div class="divider"></div>
+      <div class="chart-wrap tall"><canvas id="chartBalance"></canvas></div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h3>📐 Comparación contra Punto de Equilibrio y Meta</h3>
+      <table class="row-table">
+        <thead><tr><th></th><th>Venta Bruta Mensual</th><th>Diferencia vs. tu venta actual</th></tr></thead>
+        <tbody id="bal_comparativaTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>Simulador de Viabilidad Financiera · Montana Vinos &amp; Parrilla · Cifras en COP · Herramienta de simulación interna, no reemplaza asesoría contable o legal formal</footer>
+
+<script>
+// ---------- STATE ----------
+let plantaRows = [
+  {nombre:'Julián · Administrador', salario:2200000, bonos:0, domFest:0},
+  {nombre:'Henrry · Cocinero principal', salario:1900000, bonos:0, domFest:4},
+  {nombre:'Víctor · Parrillero', salario:1700000, bonos:0, domFest:4},
+  {nombre:'Estiguar', salario:1500000, bonos:0, domFest:4},
+  {nombre:'Auxiliar 1', salario:1450000, bonos:0, domFest:4},
+  {nombre:'Ami · Mesera', salario:1450000, bonos:0, domFest:4},
+  {nombre:'Sebastián · Bartender', salario:1550000, bonos:0, domFest:4},
+  {nombre:'Felipe · Mesero', salario:1450000, bonos:0, domFest:4},
+];
+let turnosRows = [
+  {nombre:'Refuerzo fin de semana', valor:70000, cantidad:8}
+];
+let insumosSemanas = [
+  {venta:null, cocina:0, bar:0, varios:0},
+  {venta:null, cocina:0, bar:0, varios:0},
+  {venta:null, cocina:0, bar:0, varios:0},
+  {venta:null, cocina:0, bar:0, varios:0},
+];
+let diasSemanaData = [
+  {dia:'Lunes', venta:1087070},
+  {dia:'Martes', venta:1619000},
+  {dia:'Miércoles', venta:1712000},
+  {dia:'Jueves', venta:1812404},
+  {dia:'Viernes', venta:3363000},
+  {dia:'Sábado', venta:3576000},
+  {dia:'Domingo', venta:3756000},
+];
+let nominaBase = 'neta'; // 'neta' | 'prov'
+let charts = {};
+
+// ---------- HELPERS ----------
+const $ = id => document.getElementById(id);
+const num = id => parseFloat($(id).value) || 0;
+const fmt = v => '$' + Math.round(v||0).toLocaleString('es-CO');
+const pct = v => (v*100).toFixed(1) + '%';
+
+function bindRecalc(){
+  document.querySelectorAll('input, select').forEach(el=>{
+    el.addEventListener('input', calcAll);
+    el.addEventListener('change', calcAll);
+  });
+}
+
+// ---------- TABS ----------
+document.querySelectorAll('#tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    $('panel-'+btn.dataset.tab).classList.add('active');
+    if(['graficas','nomina','insumos','dias','balance'].includes(btn.dataset.tab)){
+      setTimeout(renderCharts, 50);
+    }
+  });
+});
+
+function setNominaBase(v){
+  nominaBase = v;
+  $('btn_nominaNeta').classList.toggle('active', v==='neta');
+  $('btn_nominaProv').classList.toggle('active', v==='prov');
+  calcAll();
+}
+
+// ---------- DYNAMIC ROWS: PLANTA ----------
+function renderPlantaTable(){
+  const tbody = document.querySelector('#tablaPlanta tbody');
+  tbody.innerHTML = '';
+  plantaRows.forEach((row, i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${row.nombre}" onchange="plantaRows[${i}].nombre=this.value"></td>
+      <td><input type="number" value="${row.salario}" onchange="plantaRows[${i}].salario=parseFloat(this.value)||0; calcAll();"></td>
+      <td><input type="number" value="${row.bonos}" onchange="plantaRows[${i}].bonos=parseFloat(this.value)||0; calcAll();"></td>
+      <td><input type="number" value="${row.domFest}" onchange="plantaRows[${i}].domFest=parseFloat(this.value)||0; calcAll();"></td>
+      <td><button class="del-btn" onclick="removePlantaRow(${i})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+function addPlantaRow(){ plantaRows.push({nombre:'Nuevo empleado', salario:1450000, bonos:0, domFest:0}); renderPlantaTable(); calcAll(); }
+function removePlantaRow(i){ plantaRows.splice(i,1); renderPlantaTable(); calcAll(); }
+
+// ---------- DYNAMIC ROWS: TURNOS ----------
+function renderTurnosTable(){
+  const tbody = document.querySelector('#tablaTurnos tbody');
+  tbody.innerHTML = '';
+  turnosRows.forEach((row, i)=>{
+    const subtotal = row.valor * row.cantidad;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${row.nombre}" onchange="turnosRows[${i}].nombre=this.value"></td>
+      <td><input type="number" value="${row.valor}" onchange="turnosRows[${i}].valor=parseFloat(this.value)||0; renderTurnosTable(); calcAll();"></td>
+      <td><input type="number" value="${row.cantidad}" onchange="turnosRows[${i}].cantidad=parseFloat(this.value)||0; renderTurnosTable(); calcAll();"></td>
+      <td style="font-family:var(--font-mono);">${fmt(subtotal)}</td>
+      <td><button class="del-btn" onclick="removeTurnoRow(${i})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+function addTurnoRow(){ turnosRows.push({nombre:'Nuevo turnero', valor:70000, cantidad:4}); renderTurnosTable(); calcAll(); }
+function removeTurnoRow(i){ turnosRows.splice(i,1); renderTurnosTable(); calcAll(); }
+
+// ---------- DYNAMIC ROWS: INSUMOS SEMANALES ----------
+function renderInsumosTable(ventaNetaSemanalProyectada, foodCostPct){
+  const tbody = document.querySelector('#tablaInsumos tbody');
+  tbody.innerHTML = '';
+  insumosSemanas.forEach((s, i)=>{
+    const ventaUsada = (s.venta===null || s.venta==='') ? ventaNetaSemanalProyectada : s.venta;
+    const total = s.cocina + s.bar + s.varios;
+    const pctReal = ventaUsada>0 ? total/ventaUsada : 0;
+    const estado = pctReal > foodCostPct ? `<span style="color:var(--danger); font-weight:700;">🔴 Sobre</span>` : `<span style="color:var(--ok); font-weight:700;">✓ OK</span>`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>Semana ${i+1}</td>
+      <td><input type="number" placeholder="${Math.round(ventaNetaSemanalProyectada).toLocaleString('es-CO')}" value="${s.venta===null?'':s.venta}" onchange="insumosSemanas[${i}].venta=this.value===''?null:parseFloat(this.value)||0; calcAll();"></td>
+      <td><input type="number" value="${s.cocina}" onchange="insumosSemanas[${i}].cocina=parseFloat(this.value)||0; calcAll();"></td>
+      <td><input type="number" value="${s.bar}" onchange="insumosSemanas[${i}].bar=parseFloat(this.value)||0; calcAll();"></td>
+      <td><input type="number" value="${s.varios}" onchange="insumosSemanas[${i}].varios=parseFloat(this.value)||0; calcAll();"></td>
+      <td style="font-family:var(--font-mono);">${fmt(total)}</td>
+      <td style="font-family:var(--font-mono);">${pct(pctReal)}</td>
+      <td>${estado}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ---------- DYNAMIC ROWS: DIAS SEMANA ----------
+function renderDiasTable(totalReal, peSemanal){
+  const tbody = document.querySelector('#tablaDias tbody');
+  tbody.innerHTML = '';
+  diasSemanaData.forEach((d, i)=>{
+    const pctDia = totalReal>0 ? d.venta/totalReal : 0;
+    const objetivo = peSemanal * pctDia;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.dia}</td>
+      <td><input type="number" value="${d.venta}" onchange="diasSemanaData[${i}].venta=parseFloat(this.value)||0; calcAll();"></td>
+      <td style="font-family:var(--font-mono);">${pct(pctDia)}</td>
+      <td style="font-family:var(--font-mono);">${fmt(objetivo)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ---------- MAIN CALC ----------
+let LAST = {};
+
+function calcAll(){
+  // ---- 1. Cascada de ingresos ----
+  const ventaBruta = num('in_ventaBruta');
+  const ipoconsumoPct = num('in_ipoconsumo')/100;
+  const propinaPct = num('in_propina')/100;
+  const diasMes = num('in_diasMes') || 26;
+  const diasSemana = num('in_diasSemana') || 6;
+  const semanasMes = diasMes/diasSemana;
+
+  const ipoconsumo = ventaBruta * ipoconsumoPct;
+  const baseTrasIpo = ventaBruta - ipoconsumo;
+  const propina = baseTrasIpo * propinaPct;
+  const ventaNeta = baseTrasIpo - propina;
+  const factorNetoBruto = (1-ipoconsumoPct)*(1-propinaPct);
+
+  const ventaNetaSemanal = ventaNeta / semanasMes;
+  const ventaNetaDiaria = ventaNeta / diasMes;
+
+  $('cascadaBoxes').innerHTML = `
+    <div class="stat" style="margin-bottom:10px;"><span class="label">Venta Bruta (100%)</span><span class="value big">${fmt(ventaBruta)}</span></div>
+    <div class="stat" style="margin-bottom:10px;"><span class="label">(-) Ipoconsumo ${pct(ipoconsumoPct)}</span><span class="value" style="color:var(--danger)">-${fmt(ipoconsumo)}</span></div>
+    <div class="stat" style="margin-bottom:10px;"><span class="label">(-) Propina sugerida ${pct(propinaPct)} (sobre subtotal)</span><span class="value" style="color:var(--danger)">-${fmt(propina)}</span></div>
+    <div class="divider"></div>
+    <div class="stat"><span class="label">(=) Venta Neta Absoluta</span><span class="value big ember">${fmt(ventaNeta)}</span></div>
+    <div class="hint" style="margin-top:10px;">Semanal: ${fmt(ventaNetaSemanal)} · Diaria: ${fmt(ventaNetaDiaria)}</div>
+  `;
+
+  // ---- 2. Costos fijos ----
+  const arriendo = num('in_arriendo');
+  const servicios = num('in_servicios');
+  const maquinaria = num('in_maquinaria');
+  const comisionesPct = num('in_comisiones')/100;
+  const comisiones = ventaBruta * comisionesPct;
+  const publicidad = num('in_publicidad');
+  const varios = num('in_varios');
+
+  const arriendoPctNeta = arriendo/ventaNeta;
+  $('alertaArriendo').innerHTML = arriendoPctNeta > 0.10
+    ? `<div class="alert danger">⚠️ El arriendo representa ${pct(arriendoPctNeta)} de la venta neta, por encima del 10% recomendado.</div>`
+    : `<div class="alert ok">✓ Arriendo en ${pct(arriendoPctNeta)} de la venta neta — dentro del rango saludable (≤10%).</div>`;
+
+  // ---- 3. Nómina ----
+  const saludPct = num('in_saludPct')/100;
+  const pensionPct = num('in_pensionPct')/100;
+  const arlPct = parseFloat($('in_arlNivel').value)/100;
+  const provisionPct = num('in_provisionPct')/100;
+  const recargoPct = num('in_recargoPct')/100;
+
+  let plantaBase = 0, plantaProvision = 0, plantaRecargo = 0;
+  plantaRows.forEach(r=>{
+    const seg = r.salario * (saludPct+pensionPct);
+    const arl = r.salario * arlPct;
+    const prov = r.salario * provisionPct;
+    const valorDia = r.salario/30;
+    const recargo = valorDia * recargoPct * (r.domFest||0);
+    plantaBase += r.salario + r.bonos + seg + arl;
+    plantaProvision += prov;
+    plantaRecargo += recargo;
+  });
+  const plantaFlujo = plantaBase + plantaRecargo;
+  const plantaTotalConProv = plantaFlujo + plantaProvision;
+
+  let turnosTotal = 0;
+  turnosRows.forEach(r=> turnosTotal += r.valor * r.cantidad);
+
+  $('out_plantaBase').textContent = fmt(plantaBase);
+  $('out_plantaRecargo').textContent = fmt(plantaRecargo);
+  $('out_plantaFlujo').textContent = fmt(plantaFlujo);
+  $('out_plantaProvision').textContent = fmt(plantaProvision);
+  $('out_turnosTotal').textContent = fmt(turnosTotal);
+
+  const nominaTotal = nominaBase==='neta'
+    ? (plantaFlujo + turnosTotal)
+    : (plantaTotalConProv + turnosTotal);
+
+  $('out_nominaBase').textContent = fmt(nominaTotal);
+  const nominaPctNeta = nominaTotal/ventaNeta;
+  $('out_nominaPct').textContent = pct(nominaPctNeta);
+
+  let alertaNominaHTML;
+  if(nominaPctNeta > 0.35){
+    alertaNominaHTML = `<div class="alert danger">⚠️ La nómina consume ${pct(nominaPctNeta)} de la venta neta, por encima del rango sano 28%-35%.</div>`;
+  } else if(nominaPctNeta < 0.28){
+    alertaNominaHTML = `<div class="alert warn">ℹ️ La nómina está en ${pct(nominaPctNeta)}, por debajo del 28% típico.</div>`;
+  } else {
+    alertaNominaHTML = `<div class="alert ok">✓ Nómina en ${pct(nominaPctNeta)} de la venta neta — dentro del rango saludable (28%-35%).</div>`;
+  }
+  $('alertaNomina').innerHTML = alertaNominaHTML;
+
+  // ---- 4. Materia prima ----
+  const foodCostPct = num('in_foodCostPct')/100;
+  const splitCocina = num('in_splitCocina')/100;
+  const splitBar = num('in_splitBar')/100;
+  const splitVarios = num('in_splitVarios')/100;
+  const sumaSplit = splitCocina+splitBar+splitVarios;
+  $('splitCheckMsg').innerHTML = Math.abs(sumaSplit-foodCostPct) > 0.005
+    ? `⚠️ El reparto sugerido suma ${pct(sumaSplit)}, y tu food cost objetivo es ${pct(foodCostPct)}. Ajusta para que ambos coincidan.`
+    : `✓ El reparto sugerido suma ${pct(sumaSplit)}, coincide con tu food cost objetivo.`;
+
+  renderInsumosTable(ventaNetaSemanal, foodCostPct);
+
+  let totalCocina=0, totalBar=0, totalVarios=0, totalVentaInsumos=0;
+  insumosSemanas.forEach(s=>{
+    const ventaUsada = (s.venta===null || s.venta==='') ? ventaNetaSemanal : s.venta;
+    totalCocina += s.cocina; totalBar += s.bar; totalVarios += s.varios;
+    totalVentaInsumos += ventaUsada;
+  });
+  const totalInsumos = totalCocina+totalBar+totalVarios;
+  const pctCocina = totalVentaInsumos>0 ? totalCocina/totalVentaInsumos : 0;
+  const pctBar = totalVentaInsumos>0 ? totalBar/totalVentaInsumos : 0;
+  const pctVarios = totalVentaInsumos>0 ? totalVarios/totalVentaInsumos : 0;
+  const pctTotalInsumos = totalVentaInsumos>0 ? totalInsumos/totalVentaInsumos : 0;
+
+  function diagRow(nombre, real, target){
+    const over = real > target;
+    return `<div class="alert ${over?'danger':'ok'}">${over?'🔴':'✓'} <strong>${nombre}:</strong> ${pct(real)} real vs. ${pct(target)} sugerido${over? ' — sobrecosto de '+pct(real-target) : ''}.</div>`;
+  }
+  $('insumosDiagnostico').innerHTML =
+    diagRow('Cocina', pctCocina, splitCocina) +
+    diagRow('Bar', pctBar, splitBar) +
+    diagRow('Varios (aseo/desechables)', pctVarios, splitVarios) +
+    diagRow('Total Materia Prima', pctTotalInsumos, foodCostPct);
+
+  // ---- 5. Costos fijos totales y punto de equilibrio ----
+  const costosFijosSinNomina = arriendo+servicios+maquinaria+comisiones+publicidad+varios;
+  const costosFijosTotal = costosFijosSinNomina + nominaTotal;
+
+  $('costosFijosResumen').innerHTML = `
+    <table class="row-table">
+      <tbody>
+        <tr><td>Arriendo</td><td style="font-family:var(--font-mono);">${fmt(arriendo)}</td></tr>
+        <tr><td>Servicios públicos</td><td>${fmt(servicios)}</td></tr>
+        <tr><td>Maquinaria</td><td>${fmt(maquinaria)}</td></tr>
+        <tr><td>Comisiones bancarias (${pct(comisionesPct)})</td><td>${fmt(comisiones)}</td></tr>
+        <tr><td>Publicidad</td><td>${fmt(publicidad)}</td></tr>
+        <tr><td>Varios</td><td>${fmt(varios)}</td></tr>
+        <tr><td><strong>Nómina total</strong></td><td><strong>${fmt(nominaTotal)}</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="divider"></div>
+    <div class="stat"><span class="label">Costos fijos totales / mes</span><span class="value big ember">${fmt(costosFijosTotal)}</span></div>
+  `;
+
+  const ventaNetaBE = costosFijosTotal / (1-foodCostPct);
+  const ventaBrutaBE = ventaNetaBE / factorNetoBruto;
+  const peDiario = ventaBrutaBE/diasMes;
+  const peSemanal = ventaBrutaBE/semanasMes;
+
+  $('out_peDiario').textContent = fmt(peDiario);
+  $('out_peSemanal').textContent = fmt(peSemanal);
+  $('out_peMensual').textContent = fmt(ventaBrutaBE);
+
+  // ---- Meta de ganancia ----
+  const margenDeseado = num('in_margenDeseado')/100;
+  let ventaBrutaMeta = 0, ventaNetaMeta = 0, alertaMargenHTML = '';
+  if(margenDeseado >= (1-foodCostPct)){
+    alertaMargenHTML = `<div class="alert danger">⚠️ Un margen del ${pct(margenDeseado)} no es alcanzable con un food cost de ${pct(foodCostPct)}. Reduce la meta o el food cost.</div>`;
+  } else {
+    ventaNetaMeta = costosFijosTotal / ((1-foodCostPct) - margenDeseado);
+    ventaBrutaMeta = ventaNetaMeta / factorNetoBruto;
+    alertaMargenHTML = `<div class="alert ok">Con estos costos, alcanzar ${pct(margenDeseado)} de margen requiere vender ${pct((ventaBrutaMeta/ventaBrutaBE - 1))} más que tu punto de equilibrio.</div>`;
+  }
+  $('alertaMargen').innerHTML = alertaMargenHTML;
+  $('out_metaDiaria').textContent = fmt(ventaBrutaMeta/diasMes);
+  $('out_metaSemanal').textContent = fmt(ventaBrutaMeta/semanasMes);
+  $('out_metaMensual').textContent = fmt(ventaBrutaMeta);
+
+  // ---- Clientes necesarios ----
+  const ticketProm = num('in_ticketProm') || 1;
+  $('out_clientesPeDia').textContent = Math.ceil(peDiario/ticketProm).toLocaleString('es-CO');
+  $('out_clientesPeSemana').textContent = Math.ceil(peSemanal/ticketProm).toLocaleString('es-CO');
+  $('out_clientesPeMes').textContent = Math.ceil(ventaBrutaBE/ticketProm).toLocaleString('es-CO');
+  $('out_clientesMetaDia').textContent = Math.ceil((ventaBrutaMeta/diasMes)/ticketProm).toLocaleString('es-CO');
+  $('out_clientesMetaSemana').textContent = Math.ceil((ventaBrutaMeta/semanasMes)/ticketProm).toLocaleString('es-CO');
+  $('out_clientesMetaMes').textContent = Math.ceil(ventaBrutaMeta/ticketProm).toLocaleString('es-CO');
+
+  // ---- Almuerzo ejecutivo ----
+  const precioAlmuerzo = num('in_precioAlmuerzo');
+  const cantAlmuerzo = num('in_cantAlmuerzo');
+  const almuerzoAplicaCascada = $('in_almuerzoAplicaCascada').checked;
+  const factorAlmuerzo = almuerzoAplicaCascada ? factorNetoBruto : 1;
+  const aporteAlmuerzo = precioAlmuerzo * factorAlmuerzo * (1-foodCostPct);
+  const aporteAlmuerzoMes = aporteAlmuerzo * cantAlmuerzo * 22;
+  $('out_aporteAlmuerzo').textContent = fmt(aporteAlmuerzo);
+  $('out_aporteAlmuerzoMes').textContent = fmt(aporteAlmuerzoMes);
+  $('aporteFormulaHint').textContent = almuerzoAplicaCascada
+    ? 'Aporte neto = precio × (1-Ipoconsumo) × (1-Propina) × (1-Food cost).'
+    : 'Aporte neto = precio × (1-Food cost). No se descuenta Ipoconsumo ni Propina porque el almuerzo ejecutivo normalmente no genera propina.';
+
+  const utilidadDeseadaMensual = ventaNetaMeta * margenDeseado;
+  const almuerzosNecesariosMes = aporteAlmuerzo>0 ? utilidadDeseadaMensual/aporteAlmuerzo : 0;
+  const almuerzosNecesariosDia = almuerzosNecesariosMes/22;
+  $('out_almuerzosNecesariosMes').textContent = Math.ceil(almuerzosNecesariosMes).toLocaleString('es-CO');
+  $('out_almuerzosNecesariosDia').textContent = Math.ceil(almuerzosNecesariosDia).toLocaleString('es-CO');
+
+  if(almuerzosNecesariosDia > cantAlmuerzo){
+    $('alertaAlmuerzos').innerHTML = `<div class="alert warn">Necesitas vender ${Math.ceil(almuerzosNecesariosDia-cantAlmuerzo)} almuerzos/día adicionales (sobre tu promedio actual de ${cantAlmuerzo}) para que este segmento por sí solo alcance la meta de margen — sin depender de otros canales.</div>`;
+  } else {
+    $('alertaAlmuerzos').innerHTML = `<div class="alert ok">Tu promedio actual de ${cantAlmuerzo} almuerzos/día ya supera lo necesario (${Math.ceil(almuerzosNecesariosDia)}) para que este segmento aporte la meta de margen.</div>`;
+  }
+
+  // ---- Prime cost ----
+  const primeCostPct = pctTotalInsumos>0 ? (nominaPctNeta + pctTotalInsumos) : (nominaPctNeta + foodCostPct);
+
+  // ---- Materia prima real/estimada del mes (para el balance) ----
+  let materiaPrimaMensualUsada = 0;
+  insumosSemanas.forEach(s=>{
+    const ventaUsada = (s.venta===null || s.venta==='') ? ventaNetaSemanal : s.venta;
+    const totalSemana = s.cocina + s.bar + s.varios;
+    materiaPrimaMensualUsada += totalSemana > 0 ? totalSemana : (ventaUsada * foodCostPct);
+  });
+
+  // ---- Balance financiero general ----
+  const gastoArriendo = arriendo, gastoServicios = servicios, gastoMaquinaria = maquinaria,
+        gastoComisiones = comisiones, gastoPublicidad = publicidad, gastoVarios = varios,
+        gastoNomina = nominaTotal, gastoMateriaPrima = materiaPrimaMensualUsada;
+  const totalGastado = gastoArriendo+gastoServicios+gastoMaquinaria+gastoComisiones+gastoPublicidad+gastoVarios+gastoNomina+gastoMateriaPrima;
+  const utilidadReal = ventaNeta - totalGastado;
+  const margenReal = ventaNeta>0 ? utilidadReal/ventaNeta : 0;
+
+  // ---- Dias & Festivos ----
+  const totalSemanaReal = diasSemanaData.reduce((a,d)=>a+d.venta,0);
+  renderDiasTable(totalSemanaReal, peSemanal);
+  $('out_totalSemanaReal').textContent = fmt(totalSemanaReal);
+  $('out_peSemanalRef').textContent = fmt(peSemanal);
+  const brecha = totalSemanaReal - peSemanal;
+  $('out_brechaSemana').innerHTML = (brecha>=0?'':'-') + '';
+  $('out_brechaSemana').textContent = (brecha>=0?'+':'') + fmt(brecha).replace('$', brecha>=0?'$':'-$');
+  $('out_brechaSemana').style.color = brecha>=0 ? 'var(--ok)' : 'var(--danger)';
+
+  // Festivo analysis
+  const diaIdx = parseInt($('in_diaFestivo').value);
+  const ventaDia = diasSemanaData[diaIdx].venta;
+  const empleadosFestivo = num('in_empleadosFestivo');
+  const recargoFestivoOverride = num('in_recargoFestivoOverride')/100;
+  const ventaNetaDia = ventaDia * factorNetoBruto;
+  const contribucionMarginal = ventaNetaDia * (1-foodCostPct);
+  const salarioDiaPromedio = plantaRows.length>0 ? (plantaRows.reduce((a,r)=>a+r.salario,0)/plantaRows.length)/30 : 0;
+  const costoRecargoExtra = salarioDiaPromedio * recargoFestivoOverride * empleadosFestivo;
+  const netoFestivo = contribucionMarginal - costoRecargoExtra;
+
+  $('festivoResultado').innerHTML = `
+    <div class="grid grid-3">
+      <div class="stat"><span class="label">Venta neta estimada ese día (${diasSemanaData[diaIdx].dia})</span><span class="value">${fmt(ventaNetaDia)}</span></div>
+      <div class="stat"><span class="label">Contribución marginal (tras food cost)</span><span class="value ember">${fmt(contribucionMarginal)}</span></div>
+      <div class="stat"><span class="label">Sobrecosto de recargo festivo</span><span class="value">${fmt(costoRecargoExtra)}</span></div>
+    </div>
+    <div class="divider"></div>
+    <div class="alert ${netoFestivo>0?'ok':'danger'}">
+      ${netoFestivo>0
+        ? `✓ Conviene abrir: la contribución neta después de pagar el recargo festivo es de ${fmt(netoFestivo)} a favor.`
+        : `⚠️ El recargo festivo (${fmt(costoRecargoExtra)}) supera la contribución marginal de ese día (${fmt(contribucionMarginal)}). Financieramente sería mejor evaluar cerrar o reducir personal ese día, en ${fmt(Math.abs(netoFestivo))}.`}
+    </div>
+  `;
+
+  // ---- Save snapshot ----
+  LAST = {
+    ventaBruta, ipoconsumo, propina, ventaNeta, ventaNetaSemanal, ventaNetaDiaria, factorNetoBruto,
+    arriendo, servicios, maquinaria, comisiones, publicidad, varios, costosFijosTotal,
+    plantaFlujo, plantaProvision, plantaTotalConProv, plantaRecargo, turnosTotal, nominaTotal, nominaPctNeta,
+    foodCostPct, pctCocina, pctBar, pctVarios, pctTotalInsumos, splitCocina, splitBar, splitVarios,
+    peDiario, peSemanal, ventaBrutaBE, margenDeseado, ventaBrutaMeta, ventaNetaMeta,
+    ticketProm, aporteAlmuerzo, aporteAlmuerzoMes, cantAlmuerzo, almuerzosNecesariosDia,
+    arriendoPctNeta, primeCostPct, totalSemanaReal, netoFestivo,
+    materiaPrimaMensualUsada, gastoArriendo, gastoServicios, gastoMaquinaria, gastoComisiones,
+    gastoPublicidad, gastoVarios, gastoNomina, gastoMateriaPrima, totalGastado, utilidadReal, margenReal
+  };
+
+  renderBalance();
+  renderRecomendaciones();
+  const activeTab = document.querySelector('#tabs button.active').dataset.tab;
+  if(['graficas','nomina','insumos','dias','balance'].includes(activeTab)) renderCharts();
+}
+
+// ---------- BALANCE GENERAL ----------
+function renderBalance(){
+  const L = LAST;
+
+  $('bal_totalIngresos').textContent = fmt(L.ventaBruta);
+  $('bal_totalGastado').textContent = fmt(L.totalGastado);
+  $('bal_utilidad').textContent = (L.utilidadReal>=0?'+':'-') + fmt(Math.abs(L.utilidadReal)).replace('$','$');
+  $('bal_utilidad').style.color = L.utilidadReal>=0 ? 'var(--ok)' : 'var(--danger)';
+
+  $('bal_ingresosTable').innerHTML = `
+    <tr><td>Venta Bruta</td><td style="font-family:var(--font-mono);">${fmt(L.ventaBruta)}</td></tr>
+    <tr><td>(-) Ipoconsumo</td><td style="font-family:var(--font-mono); color:var(--danger);">-${fmt(L.ipoconsumo)}</td></tr>
+    <tr><td>(-) Propina</td><td style="font-family:var(--font-mono); color:var(--danger);">-${fmt(L.propina)}</td></tr>
+    <tr><td><strong>= Venta Neta disponible</strong></td><td style="font-family:var(--font-mono);"><strong>${fmt(L.ventaNeta)}</strong></td></tr>
+  `;
+
+  const gastos = [
+    ['Materia Prima (real/estimada)', L.gastoMateriaPrima],
+    ['Nómina total', L.gastoNomina],
+    ['Arriendo', L.gastoArriendo],
+    ['Servicios públicos', L.gastoServicios],
+    ['Comisiones bancarias', L.gastoComisiones],
+    ['Maquinaria', L.gastoMaquinaria],
+    ['Publicidad', L.gastoPublicidad],
+    ['Varios', L.gastoVarios],
+  ];
+  $('bal_gastosTable').innerHTML = gastos.map(g => `
+    <tr><td>${g[0]}</td><td style="font-family:var(--font-mono);">${fmt(g[1])}</td><td style="font-family:var(--font-mono);">${pct(g[1]/L.totalGastado)}</td></tr>
+  `).join('') + `<tr><td><strong>TOTAL GASTADO</strong></td><td style="font-family:var(--font-mono);"><strong>${fmt(L.totalGastado)}</strong></td><td>100%</td></tr>`;
+
+  $('bal_resultadoBox').innerHTML = `
+    <div class="grid grid-3">
+      <div class="stat"><span class="label">Venta Neta disponible</span><span class="value">${fmt(L.ventaNeta)}</span></div>
+      <div class="stat"><span class="label">(-) Total gastado / invertido</span><span class="value" style="color:var(--danger)">-${fmt(L.totalGastado)}</span></div>
+      <div class="stat"><span class="label">(=) Utilidad / Pérdida</span><span class="value big" style="color:${L.utilidadReal>=0?'var(--ok)':'var(--danger)'}">${L.utilidadReal>=0?'+':'-'}${fmt(Math.abs(L.utilidadReal))}</span></div>
+    </div>
+    <div class="alert ${L.utilidadReal>=0 ? 'ok':'danger'}" style="margin-top:14px;">
+      ${L.utilidadReal>=0
+        ? `✓ El mes cierra en <strong>utilidad</strong>: ${fmt(L.utilidadReal)}, equivalente a un margen real de ${pct(L.margenReal)} sobre la venta neta.`
+        : `⚠️ El mes cierra en <strong>pérdida</strong>: ${fmt(Math.abs(L.utilidadReal))}, equivalente a ${pct(Math.abs(L.margenReal))} de la venta neta. Revisa la pestaña de Recomendaciones para ver qué rubro ajustar primero.`}
+    </div>
+  `;
+
+  $('bal_comparativaTable').innerHTML = `
+    <tr><td>Tu venta bruta actual</td><td style="font-family:var(--font-mono);">${fmt(L.ventaBruta)}</td><td>—</td></tr>
+    <tr><td>Punto de equilibrio</td><td style="font-family:var(--font-mono);">${fmt(L.ventaBrutaBE)}</td><td style="color:${L.ventaBruta>=L.ventaBrutaBE?'var(--ok)':'var(--danger)'}">${L.ventaBruta>=L.ventaBrutaBE?'+':''}${fmt(L.ventaBruta-L.ventaBrutaBE)}</td></tr>
+    <tr><td>Meta de ganancia (${pct(L.margenDeseado)})</td><td style="font-family:var(--font-mono);">${fmt(L.ventaBrutaMeta)}</td><td style="color:${L.ventaBruta>=L.ventaBrutaMeta?'var(--ok)':'var(--danger)'}">${L.ventaBruta>=L.ventaBrutaMeta?'+':''}${fmt(L.ventaBruta-L.ventaBrutaMeta)}</td></tr>
+  `;
+}
+
+// ---------- RECOMENDACIONES ----------
+function renderRecomendaciones(){
+  const L = LAST;
+  const items = [];
+
+  if(L.arriendoPctNeta > 0.10){
+    const targetArriendo = L.ventaNeta*0.10;
+    const ventaNecesaria = L.arriendo/0.10;
+    items.push({level:'danger', head:'Arriendo por encima del estándar',
+      text:`Tu arriendo (${fmt(L.arriendo)}) representa ${pct(L.arriendoPctNeta)} de la venta neta (${fmt(L.ventaNeta)}). El estándar es ≤10%.`,
+      fix:`Ajuste: para quedar en 10% necesitas o bajar el arriendo a ${fmt(targetArriendo)}, o subir tu venta neta a ${fmt(L.ventaNeta*(L.arriendoPctNeta/0.10))}.`});
+  } else {
+    items.push({level:'ok', head:'Arriendo saludable', text:`${fmt(L.arriendo)} equivale a ${pct(L.arriendoPctNeta)} de la venta neta, dentro del rango recomendado (≤10%).`});
+  }
+
+  if(L.nominaPctNeta > 0.35){
+    const targetNomina = L.ventaNeta*0.35;
+    items.push({level:'danger', head:'Nómina elevada',
+      text:`Tu nómina total (${fmt(L.nominaTotal)}) es ${pct(L.nominaPctNeta)} de la venta neta (rango sano: 28%-35%).`,
+      fix:`Ajuste: para bajar a 35% necesitas reducir la nómina en ${fmt(L.nominaTotal-targetNomina)}, o aumentar tu venta neta a ${fmt(L.nominaTotal/0.35)}.`});
+  } else if(L.nominaPctNeta < 0.28){
+    items.push({level:'warn', head:'Nómina baja frente al estándar', text:`${pct(L.nominaPctNeta)} está por debajo del 28% típico — hay espacio para reforzar equipo sin desbalancear costos.`});
+  } else {
+    items.push({level:'ok', head:'Nómina en rango saludable', text:`${fmt(L.nominaTotal)} equivale a ${pct(L.nominaPctNeta)} de la venta neta, dentro del estándar (28%-35%).`});
+  }
+
+  if(L.pctTotalInsumos > L.foodCostPct){
+    const exceso = L.pctTotalInsumos - L.foodCostPct;
+    let peor = 'Cocina', peorVal = L.pctCocina - L.splitCocina;
+    if((L.pctBar-L.splitBar) > peorVal){ peor='Bar'; peorVal = L.pctBar-L.splitBar; }
+    if((L.pctVarios-L.splitVarios) > peorVal){ peor='Varios (aseo/desechables)'; peorVal = L.pctVarios-L.splitVarios; }
+    items.push({level:'danger', head:'Materia prima por encima del objetivo — el foco actual del problema',
+      text:`El total de compras acumuladas está en ${pct(L.pctTotalInsumos)} de la venta neta, ${pct(exceso)} por encima del ${pct(L.foodCostPct)} objetivo. La categoría con mayor desviación es ${peor}.`,
+      fix:`Ajuste: revisa mermas, porciones estándar y proveedores en ${peor} primero — es donde más se está filtrando el sobrecosto. Reducir ese rubro a su meta de reparto (${peor==='Cocina'?pct(L.splitCocina):peor==='Bar'?pct(L.splitBar):pct(L.splitVarios)}) recuperaría gran parte del margen.`});
+  } else {
+    items.push({level:'ok', head:'Materia prima bajo control', text:`El total de compras está en ${pct(L.pctTotalInsumos)} de la venta neta, dentro del objetivo (${pct(L.foodCostPct)}).`});
+  }
+
+  if(L.primeCostPct > 0.65){
+    items.push({level:'danger', head:'Prime cost por encima del límite', text:`Nómina + materia prima suman ${pct(L.primeCostPct)} de la venta neta (estándar: 55%-65%). Con este nivel el margen real queda muy comprimido — prioriza primero materia prima si ese fue el rubro señalado arriba.`});
+  } else if(L.primeCostPct > 0.60){
+    items.push({level:'warn', head:'Prime cost en el límite superior', text:`Nómina + materia prima están en ${pct(L.primeCostPct)}, en el borde alto del rango sano (55%-65%).`});
+  } else {
+    items.push({level:'ok', head:'Prime cost controlado', text:`Nómina + materia prima suman ${pct(L.primeCostPct)} de la venta neta, dentro del rango saludable (55%-65%).`});
+  }
+
+  if(L.ventaBruta < L.ventaBrutaBE){
+    items.push({level:'danger', head:'La venta proyectada no cubre el punto de equilibrio',
+      text:`Tu venta bruta mensual proyectada (${fmt(L.ventaBruta)}) está por debajo del punto de equilibrio (${fmt(L.ventaBrutaBE)}).`,
+      fix:`Ajuste: te faltan ${fmt(L.ventaBrutaBE-L.ventaBruta)} al mes, equivalentes a aprox. ${Math.ceil((L.ventaBrutaBE-L.ventaBruta)/L.ticketProm)} clientes adicionales.`});
+  } else if(L.ventaBruta < L.ventaBrutaMeta){
+    items.push({level:'warn', head:'Cubre costos, pero no la meta de utilidad',
+      text:`Superas el punto de equilibrio, pero aún no alcanzas la venta necesaria (${fmt(L.ventaBrutaMeta)}) para lograr ${pct(L.margenDeseado)} de margen.`,
+      fix:`Ajuste: la brecha es ${fmt(L.ventaBrutaMeta-L.ventaBruta)}, equivalente a aprox. ${Math.ceil((L.ventaBrutaMeta-L.ventaBruta)/L.ticketProm)} clientes adicionales al mes, o ${Math.ceil(L.almuerzosNecesariosDia-L.cantAlmuerzo)} almuerzos ejecutivos extra al día.`});
+  } else {
+    items.push({level:'ok', head:'Venta proyectada cubre la meta de utilidad', text:`${fmt(L.ventaBruta)} de venta bruta mensual supera el punto de equilibrio y la meta de ${pct(L.margenDeseado)} de margen.`});
+  }
+
+  if(L.netoFestivo < 0){
+    items.push({level:'warn', head:'Día festivo evaluado: revisar apertura', text:`Con el día festivo seleccionado en la pestaña "Días & Festivos", el sobrecosto de recargo supera la contribución marginal en ${fmt(Math.abs(L.netoFestivo))}. Evalúa reducir personal ese día o cambiar el esquema de turnos.`});
+  }
+
+  const html = items.map(it => `
+    <div class="reco-item ${it.level}">
+      <div class="head">${it.head}</div>
+      <p>${it.text}</p>
+      ${it.fix ? `<p class="fix">${it.fix}</p>` : ''}
+    </div>
+  `).join('');
+  $('recoList').innerHTML = html;
+}
+
+// ---------- CHARTS ----------
+function destroyCharts(){ Object.values(charts).forEach(c=>c && c.destroy()); charts = {}; }
+
+function renderCharts(){
+  destroyCharts();
+  const L = LAST;
+  const creamDim = '#C9BAAC';
+  Chart.defaults.color = creamDim;
+  Chart.defaults.font.family = "'Inter', sans-serif";
+
+  if($('chartCascada')) charts.cascada = new Chart($('chartCascada'), {
+    type:'bar',
+    data:{ labels:['Venta Bruta','Ipoconsumo','Propina','Venta Neta'],
+      datasets:[{ data:[L.ventaBruta, -L.ipoconsumo, -L.propina, L.ventaNeta],
+        backgroundColor:['#8C2F45','#C24545','#C24545','#D8893F'], borderRadius:6 }] },
+    options:{ plugins:{legend:{display:false}},
+      scales:{ y:{ grid:{color:'#3A2620'}, ticks:{ callback:v=>'$'+(v/1e6).toFixed(0)+'M' } }, x:{ grid:{display:false} } } }
+  });
+
+  if($('chartCostos')) charts.costos = new Chart($('chartCostos'), {
+    type:'doughnut',
+    data:{ labels:['Nómina','Arriendo','Servicios','Maquinaria','Comisiones','Publicidad','Varios'],
+      datasets:[{ data:[L.nominaTotal, L.arriendo, L.servicios, L.maquinaria, L.comisiones, L.publicidad, L.varios],
+        backgroundColor:['#6E2036','#D8893F','#8C2F45','#587A54','#C9BAAC','#E9AC6D','#3A2620'], borderWidth:2, borderColor:'#241A17' }] },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12, padding:12, font:{size:11}}}} }
+  });
+
+  if($('chartBreakeven')) charts.breakeven = new Chart($('chartBreakeven'), {
+    type:'bar',
+    data:{ labels:['Venta Proyectada','Punto de Equilibrio','Meta de Ganancia'],
+      datasets:[{ data:[L.ventaBruta, L.ventaBrutaBE, L.ventaBrutaMeta], backgroundColor:['#D8893F','#587A54','#8C2F45'], borderRadius:6 }] },
+    options:{ indexAxis:'y', plugins:{legend:{display:false}},
+      scales:{ x:{ grid:{color:'#3A2620'}, ticks:{ callback:v=>'$'+(v/1e6).toFixed(0)+'M' } }, y:{ grid:{display:false} } } }
+  });
+
+  const totalReal = L.totalSemanaReal || diasSemanaData.reduce((a,d)=>a+d.venta,0);
+  const diasLabelsShort = diasSemanaData.map(d=>d.dia.slice(0,3));
+  const objetivoPorDia = diasSemanaData.map(d => (totalReal>0? d.venta/totalReal:0) * L.peSemanal);
+  if($('chartSemana')) charts.semana = new Chart($('chartSemana'), {
+    type:'bar',
+    data:{ labels:diasLabelsShort,
+      datasets:[
+        { label:'Venta real promedio', data:diasSemanaData.map(d=>d.venta), backgroundColor:'#8C2F45', borderRadius:6 },
+        { label:'Objetivo (escalado a P.E. semanal)', data:objetivoPorDia, backgroundColor:'#D8893F', borderRadius:6 },
+      ] },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}},
+      scales:{ y:{ grid:{color:'#3A2620'}, ticks:{ callback:v=>'$'+(v/1e6).toFixed(1)+'M' } }, x:{ grid:{display:false} } } }
+  });
+
+  if($('chartDias')) charts.dias = new Chart($('chartDias'), {
+    type:'bar',
+    data:{ labels: diasSemanaData.map(d=>d.dia),
+      datasets:[{ label:'Venta bruta promedio', data:diasSemanaData.map(d=>d.venta),
+        backgroundColor: diasSemanaData.map((d,i)=> i<4 ? '#8C2F45':'#D8893F'), borderRadius:6 }] },
+    options:{ plugins:{legend:{display:false}},
+      scales:{ y:{ grid:{color:'#3A2620'}, ticks:{ callback:v=>'$'+(v/1e6).toFixed(1)+'M' } }, x:{ grid:{display:false} } } }
+  });
+
+  if($('chartInsumosSemana')){
+    const labels = ['Semana 1','Semana 2','Semana 3','Semana 4'];
+    const targets = insumosSemanas.map(s=>{
+      const ventaUsada = (s.venta===null || s.venta==='') ? L.ventaNetaSemanal : s.venta;
+      return ventaUsada * L.foodCostPct;
+    });
+    charts.insumos = new Chart($('chartInsumosSemana'), {
+      data:{ labels,
+        datasets:[
+          { type:'bar', label:'Cocina', data:insumosSemanas.map(s=>s.cocina), backgroundColor:'#8C2F45', stack:'s' },
+          { type:'bar', label:'Bar', data:insumosSemanas.map(s=>s.bar), backgroundColor:'#587A54', stack:'s' },
+          { type:'bar', label:'Varios', data:insumosSemanas.map(s=>s.varios), backgroundColor:'#C9BAAC', stack:'s' },
+          { type:'line', label:'Presupuesto 30%', data:targets, borderColor:'#D8893F', backgroundColor:'#D8893F', borderWidth:2, pointRadius:3, tension:0 },
+        ] },
+      options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}},
+        scales:{ y:{ grid:{color:'#3A2620'}, ticks:{ callback:v=>'$'+(v/1e6).toFixed(1)+'M' }, stacked:true },
+          x:{ grid:{display:false}, stacked:true } } }
+    });
+  }
+
+  if($('chartNominaMini')) charts.nominaMini = new Chart($('chartNominaMini'), {
+    type:'bar',
+    data:{ labels:['Nómina / Venta Neta'],
+      datasets:[
+        { label:'Tu situación', data:[L.nominaPctNeta*100], backgroundColor:'#D8893F', borderRadius:6 },
+        { label:'Mínimo saludable', data:[28], backgroundColor:'#587A54', borderRadius:6 },
+        { label:'Máximo saludable', data:[35], backgroundColor:'#6E2036', borderRadius:6 },
+      ] },
+    options:{ indexAxis:'y', plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}},
+      scales:{ x:{ grid:{color:'#3A2620'}, ticks:{ callback:v=>v+'%' } }, y:{ grid:{display:false} } } }
+  });
+
+  if($('chartBalance')) charts.balance = new Chart($('chartBalance'), {
+    type:'bar',
+    data:{ labels:['Venta Neta','Materia Prima','Nómina','Arriendo','Servicios','Comisiones','Maquinaria','Publicidad','Varios','Utilidad/Pérdida'],
+      datasets:[{
+        data:[L.ventaNeta, -L.gastoMateriaPrima, -L.gastoNomina, -L.gastoArriendo, -L.gastoServicios, -L.gastoComisiones, -L.gastoMaquinaria, -L.gastoPublicidad, -L.gastoVarios, L.utilidadReal],
+        backgroundColor:['#587A54','#C24545','#C24545','#C24545','#C24545','#C24545','#C24545','#C24545','#C24545', L.utilidadReal>=0?'#587A54':'#C24545'],
+        borderRadius:6
+      }] },
+    options:{ plugins:{legend:{display:false}},
+      scales:{ y:{ grid:{color:'#3A2620'}, ticks:{ callback:v=>'$'+(v/1e6).toFixed(0)+'M' } }, x:{ grid:{display:false}, ticks:{font:{size:10}} } } }
+  });
+
+  if($('chartBenchmarks')) charts.benchmarks = new Chart($('chartBenchmarks'), {
+    type:'bar',
+    data:{ labels:['Arriendo','Nómina','Food Cost','Prime Cost'],
+      datasets:[
+        { label:'Tu situación', data:[L.arriendoPctNeta*100, L.nominaPctNeta*100, L.pctTotalInsumos*100, L.primeCostPct*100], backgroundColor:'#D8893F', borderRadius:6 },
+        { label:'Estándar / máximo recomendado', data:[10, 35, L.foodCostPct*100, 65], backgroundColor:'#587A54', borderRadius:6 },
+      ] },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}},
+      scales:{ y:{ grid:{color:'#3A2620'}, ticks:{ callback:v=>v+'%' } }, x:{ grid:{display:false} } } }
+  });
+}
+
+// ---------- PDF EXPORT ----------
+function exportPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const L = LAST;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('Montana Vinos & Parrilla — Reporte de Viabilidad Financiera', 14, 18);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('Generado: ' + new Date().toLocaleDateString('es-CO'), 14, 25);
+
+  doc.autoTable({ startY:32, head:[['Balance Financiero General (mensual)','Valor']],
+    body:[
+      ['Total Ingresos (Venta Bruta)', fmt(L.ventaBruta)],
+      ['Total Gastado / Invertido', fmt(L.totalGastado)],
+      ['  · Materia Prima', fmt(L.gastoMateriaPrima)],
+      ['  · Nómina', fmt(L.gastoNomina)],
+      ['  · Arriendo', fmt(L.gastoArriendo)],
+      ['  · Servicios públicos', fmt(L.gastoServicios)],
+      ['  · Comisiones bancarias', fmt(L.gastoComisiones)],
+      ['  · Maquinaria', fmt(L.gastoMaquinaria)],
+      ['  · Publicidad', fmt(L.gastoPublicidad)],
+      ['  · Varios', fmt(L.gastoVarios)],
+      [L.utilidadReal>=0 ? 'UTILIDAD DEL MES' : 'PÉRDIDA DEL MES', (L.utilidadReal>=0?'+':'-')+fmt(Math.abs(L.utilidadReal))],
+      ['Margen real sobre venta neta', pct(L.margenReal)],
+    ],
+    theme:'grid', headStyles:{fillColor:[110,32,54]} });
+
+  doc.autoTable({ startY: doc.lastAutoTable.finalY+8, head:[['Cascada de Ingresos (mensual)','Valor']],
+    body:[ ['Venta Bruta', fmt(L.ventaBruta)], ['(-) Ipoconsumo', fmt(L.ipoconsumo)], ['(-) Propina sugerida', fmt(L.propina)], ['(=) Venta Neta Absoluta', fmt(L.ventaNeta)] ],
+    theme:'grid', headStyles:{fillColor:[110,32,54]} });
+
+  doc.autoTable({ startY: doc.lastAutoTable.finalY+8, head:[['Costos Fijos (mensual)','Valor']],
+    body:[ ['Arriendo', fmt(L.arriendo)], ['Servicios públicos', fmt(L.servicios)], ['Maquinaria', fmt(L.maquinaria)], ['Comisiones bancarias', fmt(L.comisiones)], ['Publicidad', fmt(L.publicidad)], ['Varios', fmt(L.varios)], ['Nómina total (incl. recargos)', fmt(L.nominaTotal)], ['TOTAL COSTOS FIJOS', fmt(L.costosFijosTotal)] ],
+    theme:'grid', headStyles:{fillColor:[110,32,54]} });
+
+  doc.autoTable({ startY: doc.lastAutoTable.finalY+8, head:[['Punto de Equilibrio y Meta','Diario','Semanal','Mensual']],
+    body:[ ['Punto de equilibrio', fmt(L.peDiario), fmt(L.peSemanal), fmt(L.ventaBrutaBE)], ['Meta de ganancia ('+pct(L.margenDeseado)+')', fmt(L.ventaBrutaMeta/26), fmt(L.ventaBrutaMeta/(26/6)), fmt(L.ventaBrutaMeta)] ],
+    theme:'grid', headStyles:{fillColor:[110,32,54]} });
+
+  doc.autoTable({ startY: doc.lastAutoTable.finalY+8, head:[['Materia Prima','Real acumulado','Objetivo']],
+    body:[ ['Cocina', pct(L.pctCocina), pct(L.splitCocina)], ['Bar', pct(L.pctBar), pct(L.splitBar)], ['Varios', pct(L.pctVarios), pct(L.splitVarios)], ['Total', pct(L.pctTotalInsumos), pct(L.foodCostPct)] ],
+    theme:'grid', headStyles:{fillColor:[110,32,54]} });
+
+  doc.autoTable({ startY: doc.lastAutoTable.finalY+8, head:[['Indicadores clave','Valor','Benchmark sector']],
+    body:[ ['Arriendo / Venta Neta', pct(L.arriendoPctNeta), '≤ 10%'], ['Nómina / Venta Neta', pct(L.nominaPctNeta), '28% - 35%'], ['Food cost real / Venta Neta', pct(L.pctTotalInsumos), '~'+pct(L.foodCostPct)], ['Prime cost (Nómina+Insumos)', pct(L.primeCostPct), '55% - 65%'], ['Aporte neto almuerzo ejecutivo', fmt(L.aporteAlmuerzo), '—'], ['Almuerzos/día necesarios para meta', Math.ceil(L.almuerzosNecesariosDia), '—'] ],
+    theme:'grid', headStyles:{fillColor:[110,32,54]} });
+
+  doc.save('reporte_viabilidad_montana.pdf');
+}
+
+// ---------- INIT ----------
+renderPlantaTable();
+renderTurnosTable();
+bindRecalc();
+calcAll();
+</script>
+</body>
+</html>
